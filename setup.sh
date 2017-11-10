@@ -121,7 +121,7 @@ function setup_powercli(){
 
 function install_gtk(){
 
-	echo "${CYAN}Installing GTK and Glade...${RESET}"
+	echo "${CYAN}Installing GTK and Glade (if you are on Ubuntu, this may take 10+ minutes)...${RESET}"
 	if [ $OS == 'mac' ]; then
 
 		brew install pygtk
@@ -132,6 +132,30 @@ function install_gtk(){
 		brew install pygobject3
 
 	elif [ $OS == 'linux' ]; then
+		### Ubuntu 16.04 comes with GTK 3.18, but the GTK and Glade on Mac
+		### is installed to 3.21... so we should upgrade like so:
+		# https://askubuntu.com/questions/933010/how-to-upgrade-gtk-3-18-to-3-20-on-ubuntu-16-04/955980
+		# echo "" | sudo add-apt-repository ppa:gnome3-team/gnome3-staging
+		# echo "" | sudo add-apt-repository ppa:gnome3-team/gnome3
+		# sudo apt update
+		# sudo apt dist-upgrade
+
+		# ## We will need to be able to import gi in Python, and the latest glade
+		# ## (an updated intltool & libxml2 is needed to build glade)
+		# sudo apt -y install python-gi-dev intltool libxml2-dev itstool libxml2-utils xsltproc
+
+		# # Now get the latest glade...
+		# wget "http://ftp.gnome.org/pub/GNOME/sources/glade/3.20/glade-3.20.0.tar.xz"
+		# unxz glade-3.20.0.tar.xz
+		# tar xvf glade-3.20.0.tar
+		# cd glade-3.20.0
+		# # Ensure you do not build the manpages, because one online does not
+		# # exist and then it breaks everything
+		# ./configure --enable-man-pages=no
+		# sudo make
+		# sudo make install
+		# cd ..
+
 		sudo apt -y install python-gi-dev glade
 	fi
 

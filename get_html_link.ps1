@@ -1,7 +1,6 @@
 
 ## $VMName must be supplied 
 
-$VMName='clean2016'
 
 
 $VM = Get-VM -Name $VMName
