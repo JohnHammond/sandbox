@@ -22,7 +22,6 @@ elif [ `uname -s` == "Linux" ]; then
 	OS="linux"
 fi
 
-
 function install_homebrew(){
 	echo "${CYAN}Installing Homebrew... ${RESET}"
 	echo "" | /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
@@ -54,8 +53,6 @@ function install_powershell(){
 	elif [ $OS == "linux" ]; then
 
 		# This is some dependency PowerShell has in the linux version...
-		wget http://security.ubuntu.com/ubuntu/pool/main/i/icu/libicu55_55.1-7ubuntu0.3_amd64.deb
-		sudo apt install ./libicu55_55.1-7ubuntu0.3_amd64.deb
 
 		POWERSHELL_PACKAGE="powershell_6.0.0-alpha.17-1ubuntu1.16.04.1_amd64.deb"
 		if [ ! -e $POWERSHELL_PACKAGE ]
@@ -107,7 +104,7 @@ function install_powercli(){
 	popd
 
 	# When you are done testing, uncomment this line to clean up the directory.
-	# rm -r $POWERCLI_DIRECTORY
+	rm -r $POWERCLI_DIRECTORY
 
 	if [ $OS == 'mac' ]; then
 		# Ensure we have the most recent OpenSSL installation
@@ -117,13 +114,29 @@ function install_powercli(){
 
 }
 
-###
-###
-### JOHN NOTE HERE: I HAVE NOT YET FINISHED INSTALLING POWERCLI ON LINUX
-###   WE MAY NEED TO USE THE ALPHA 17 VERSION, WHICH MEANS THAT
-###   WE HAVE TO CHANGE THE WAY THAT WE INSTALL POWERSHELL (direct download)
-###
+function setup_powercli(){
 
+	echo "${CYAN}Setting up VMware PowerCLI...${RESET}"
+	powershell -Command "Get-Module -ListAvailable PowerCLI* | Import-Module; Set-PowerCLIConfiguration -InvalidCertificateAction Ignore -Confirm:\$false"
+}
+
+function install_gtk(){
+
+	echo "${CYAN}Installing GTK and Glade...${RESET}"
+	if [ $OS == 'mac' ]; then
+
+		brew install pygtk
+		mkdir -p ~/Library/Python/2.7/lib/python/site-packages
+		echo 'import site; site.addsitedir("/usr/local/lib/python2.7/site-packages")' >> ~/Library/Python/2.7/lib/python/site-packages/homebrew.pth
+		brew install gtk+3
+		brew install glade
+		brew install pygobject3
+
+	elif [ $OS == 'linux' ]; then
+		sudo apt -y install python-gi-dev glade
+	fi
+
+}
 
 function main(){
 
@@ -132,8 +145,10 @@ function main(){
 	fi
 
 	install_powershell
-
 	install_powercli
+	setup_powercli
+	install_gtk
+
 }
 
 main 
