@@ -41,8 +41,6 @@ The following is a list and short description of the content you may find in thi
     
     This is the first script you should run on a new machine... assuming that you are deploying on a Mac, which is what we were told the product would be deployed on. It simply downloads and installs `git`.
 
-* [`02_`]
-
 [VMWare]: https://www.vmware.com/
 [vSphere]: https://www.vmware.com/products/vsphere.html
 [ESXi]: https://www.vmware.com/products/esxi-and-esx.html
