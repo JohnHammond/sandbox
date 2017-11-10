@@ -52,7 +52,6 @@ function install_powershell(){
 		rm $POWERSHELL_PACKAGE
 	elif [ $OS == "linux" ]; then
 
-		# This is some dependency PowerShell has in the linux version...
 
 		POWERSHELL_PACKAGE="powershell_6.0.0-alpha.17-1ubuntu1.16.04.1_amd64.deb"
 		if [ ! -e $POWERSHELL_PACKAGE ]
@@ -86,7 +85,7 @@ function install_powercli(){
 	pushd
 	cd $POWERCLI_DIRECTORY
 
-	sudo apt -y install curl
+	
 	curl "https://download3.vmware.com/software/vmw-tools/powerclicore/PowerCLI_Core.zip" > $POWERCLI_ZIP
 
 	unzip -o $POWERCLI_ZIP
@@ -142,6 +141,9 @@ function main(){
 
 	if [ $OS  == "mac" ]; then
 		install_homebrew
+	elif [ $OS == 'linux' ] ; then
+		# Just for general success across the scripts..
+		sudo apt -y install curl
 	fi
 
 	install_powershell
