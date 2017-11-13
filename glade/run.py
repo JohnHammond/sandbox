@@ -5,7 +5,7 @@ from gi.repository import Gtk
 import re
 
 builder = Gtk.Builder()
-builder.add_from_file( 'test.glade' )
+builder.add_from_file( 'dummy.glade' )
 
 
 def ip_entry_activate_cb( widget):
