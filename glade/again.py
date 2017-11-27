@@ -1,12 +1,11 @@
 #!/usr/bin/env python
 
 import gi
-from gi.repository import Gtk
+from gi.repository import Gtk, Gdk
 import re
 
 builder = Gtk.Builder()
-builder.add_from_file( 'test.glade' )
-
+builder.add_from_file( 'gui.glade' )
 
 
 def ip_entry_activate_cb( widget):
@@ -32,9 +31,13 @@ handlers = {
 
 builder.connect_signals(handlers)
 
-window = builder.get_object('window')
-window.show_all()
+window = builder.get_object('main_window')
+drawing_area = builder.get_object('drawing_area')
 
+white = Gdk.color_parse("AliceBlue")
+white = Gdk.RGBA.from_color(white)
+drawing_area.override_background_color(0, white)
+drawing_area.show_all()
+window.show_all()
 window.connect('destroy', Gtk.main_quit)
 Gtk.main()
-
