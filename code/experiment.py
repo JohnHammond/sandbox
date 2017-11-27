@@ -1,6 +1,10 @@
+#!/usr/bin/env python
+
+
 import sys
 from subprocess import PIPE, Popen, STDOUT
 from threading  import Thread
+import readline
 
 try:
     from Queue import Queue, Empty
@@ -15,6 +19,7 @@ def enqueue_output(out, queue):
     out.stdout.close()
 
 p = Popen(['powershell'], stdout=PIPE, stdin=PIPE, stderr=STDOUT, bufsize=1, close_fds=ON_POSIX)
+p.stdin.write('\n') 
 q = Queue()
 t = Thread(target=enqueue_output, args=(p.stdout, q))
 t.daemon = True # thread dies with the program
@@ -25,12 +30,16 @@ t.start()
 # read line without blocking
 # print p.stdout.readline()
 while ( 1 ):
-	try:  
+	try:
 		# line = q.get_nowait() # or q.get(timeout=.1)
 		line = q.get(timeout=.2)
 	except Empty:
 	    answer = raw_input('> ')
+	    readline.add_history(answer)
 	    p.stdin.write(answer + '\n')
 	else: # got line
 	    # ... do something with line
 	    print(line),
+
+
+# Get-Module -ListAvailable PowerCLI* | Import-Module

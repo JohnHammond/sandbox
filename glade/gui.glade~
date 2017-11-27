@@ -226,6 +226,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <property name="halign">start</property>
+                <property name="hexpand">False</property>
                 <property name="orientation">vertical</property>
                 <child>
                   <object class="GtkLabel" id="vm_name_label">
@@ -579,9 +580,27 @@
               </packing>
             </child>
             <child>
-              <object class="GtkDrawingArea" id="drawing_area">
+              <object class="GtkOverlay" id="fixed_middle">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
+                <child>
+                  <object class="GtkImage">
+                    <property name="name">overlay</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                    <property name="pixbuf">faded_white_background.png</property>
+                  </object>
+                  <packing>
+                    <property name="index">-1</property>
+                  </packing>
+                </child>
+                <child type="overlay">
+                  <object class="GtkFixed" id="fixed">
+                    <property name="name">fixed</property>
+                    <property name="visible">True</property>
+                    <property name="can_focus">False</property>
+                  </object>
+                </child>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -615,8 +634,6 @@
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
                                 <property name="margin">40</property>
-                                <property name="hexpand">False</property>
-                                <property name="vexpand">False</property>
                                 <property name="model">windows_listing</property>
                                 <property name="columns">1</property>
                                 <property name="row_spacing">0</property>
@@ -632,9 +649,7 @@
                                 <child>
                                   <object class="GtkCellRendererText" id="text"/>
                                   <attributes>
-                                    <attribute name="cell-background">1</attribute>
                                     <attribute name="text">1</attribute>
-                                    <attribute name="foreground-rgba">3</attribute>
                                   </attributes>
                                 </child>
                               </object>

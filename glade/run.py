@@ -32,7 +32,7 @@ handlers = {
 
 builder.connect_signals(handlers)
 
-window = builder.get_object('window')
+window = builder.get_object('vmware_ip_window')
 window.show_all()
 
 window.connect('destroy', Gtk.main_quit)
