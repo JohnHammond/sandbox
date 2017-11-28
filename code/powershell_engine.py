@@ -117,8 +117,8 @@ class Powershell:
 
 if ( __name__ == "__main__" ):
 	powershell = Powershell()	
-	# print powershell.import_powercli()
-	# print powershell.connect_testing_server()
+	powershell.import_powercli()
+	powershell.connect_testing_server()
 	# print powershell.run_command('(Get-VM).Name')
-	print powershell.run_command('whoami')
+	print powershell.run_command('Get-Folder')
 	# powershell.interactive()

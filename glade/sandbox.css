@@ -2,3 +2,8 @@
 	background-color: white;
 	background: white;
 }
+
+#widget {
+	/*background-color: red;*/
+	border: 1px dashed green;
+}
