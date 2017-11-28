@@ -3,7 +3,13 @@
 	background: white;
 }
 
-#widget {
-	/*background-color: red;*/
+#selected {
+	
 	border: 1px dashed green;
+	background: rgba(255,255,255,0.8);
+}
+
+#vmname_entry{
+	border: 0px solid black;
+	background: rgba(255,255,255,0.5);
 }

@@ -21,7 +21,7 @@
     </columns>
     <data>
       <row>
-        <col id="0">icons/kali_150x150.png</col>
+        <col id="0">icons/windows_10_150x150.png</col>
         <col id="1" translatable="yes">Kali Linux</col>
       </row>
     </data>
@@ -43,6 +43,12 @@
       <!-- column-name name -->
       <column type="gchararray"/>
     </columns>
+    <data>
+      <row>
+        <col id="0">icons/windows_10_150x150.png</col>
+        <col id="1" translatable="yes">Windows 10</col>
+      </row>
+    </data>
   </object>
   <object class="GtkWindow" id="main_window">
     <property name="can_focus">False</property>
@@ -590,18 +596,26 @@
                   </packing>
                 </child>
                 <child type="overlay">
-                  <object class="GtkScrolledWindow" id="middle_scroll">
+                  <object class="GtkEventBox" id="fixed_middle_event_box">
                     <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="shadow_type">in</property>
+                    <property name="can_focus">False</property>
                     <child>
-                      <object class="GtkLayout" id="fixed_middle">
+                      <object class="GtkScrolledWindow" id="middle_scroll">
                         <property name="visible">True</property>
-                        <property name="can_focus">False</property>
-                        <property name="hscroll_policy">natural</property>
-                        <property name="vscroll_policy">natural</property>
-                        <property name="width">2000</property>
-                        <property name="height">2000</property>
+                        <property name="can_focus">True</property>
+                        <property name="shadow_type">in</property>
+                        <child>
+                          <object class="GtkLayout" id="fixed_middle">
+                            <property name="visible">True</property>
+                            <property name="can_focus">False</property>
+                            <property name="can_default">True</property>
+                            <property name="has_default">True</property>
+                            <property name="hscroll_policy">natural</property>
+                            <property name="vscroll_policy">natural</property>
+                            <property name="width">2000</property>
+                            <property name="height">2000</property>
+                          </object>
+                        </child>
                       </object>
                     </child>
                   </object>
