@@ -19,12 +19,6 @@
       <!-- column-name name -->
       <column type="gchararray"/>
     </columns>
-    <data>
-      <row>
-        <col id="0">icons/windows_10_150x150.png</col>
-        <col id="1" translatable="yes">Kali Linux</col>
-      </row>
-    </data>
   </object>
   <object class="GtkAdjustment" id="powershell_scroller">
     <property name="upper">100</property>
@@ -43,12 +37,6 @@
       <!-- column-name name -->
       <column type="gchararray"/>
     </columns>
-    <data>
-      <row>
-        <col id="0">icons/windows_10_150x150.png</col>
-        <col id="1" translatable="yes">Windows 10</col>
-      </row>
-    </data>
   </object>
   <object class="GtkWindow" id="main_window">
     <property name="can_focus">False</property>
@@ -777,6 +765,19 @@
                         <property name="expand">True</property>
                         <property name="fill">True</property>
                         <property name="position">0</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="load_vapps_button">
+                        <property name="label" translatable="yes">Load vApps</property>
+                        <property name="visible">True</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">1</property>
                       </packing>
                     </child>
                   </object>

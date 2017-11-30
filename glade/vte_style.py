@@ -34,7 +34,7 @@ class VM:
 
 		self.hostname = 'virtual-machine'
 		self.ip_method = 'static'
-		
+		self.vapp_name = ''
 		# self.ip_address = ''
 		self.hdd = 50 # GB
 		self.cpu = 1 # #
@@ -49,6 +49,7 @@ class VMIcon():
 
 		# Create the backend virtual machine object...
 		self.vm = VM()
+		self.vm.vapp_name = image_filename
 
 		# Define the GUI controls...
 		self.selected = False
@@ -222,111 +223,110 @@ class VteWidget:
 		self.last_output = ''
 		self.visible_output = ''
 
+
 		# Add it to the container (assuming it is a GtkBox...)
 		self.box = container
 		self.box.pack_start(self.terminal, True, True, 0)
 
+		# Keep track of the function being used to process output.
+		# THIS IS NECESSARY FOR OUR SYNCHRONIZED I/O!
 		self.handling_output_function = None
+		self.initialized = False
 
 		# Monitor when a command finishes...
+		# THIS IS NECESSARY FOR OUR SYNCHRONIZED I/O!
 		self.terminal.connect('contents-changed', self.get_output,
 			self.handling_output_function)
-		
-		# Turn off input....
-		#self.terminal.set_property('input-enabled', False)
 
 		# Startup...
-		GLib.timeout_add_seconds( 2, self.initialize_powershell )
+		#GLib.timeout_add_seconds( 2, self.initialize_powershell )
 
 	def run_command( self, command ):
 		self.terminal.feed_child(command + '\n', len(command)+ 1)
 
+
 	def get_output( self, widget, handling_output_function = None ):
-		# print "="*(80)
-
-		# print "CURRENT OUTPUT IS"
-		# print "vvvvvvvvvvvvvvvvvv"
+		'''
+		Whenever the display changes in the terminal, monitor the changes
+		so we can scrape out the output of a command.
+		'''
 		self.visible_output = self.terminal.get_text()[0]
-		# print self.visible_output
-		# print "^^^^^^^^^^^^^^^^^^"
-		# print 
+		if self.visible_output.endswith('> \n\n\n\n\n') \
+												and not self.initialized:
+			self.initialized = True
+			GLib.timeout_add(300, self.initialize)
+			# self.initialize()
 
+		# If we have set up a handler function, carve out the last output.
 		if self.handling_output_function:
-			# print "HANDLING THIS COMMAND!"
-			command_output = "\n".join(self.visible_output.split('> ')[-1].split('\n')[1:]).strip()
-			# print "****************"
-			# print "COMMAND OUTPUT IS",
-			# print repr(command_output.strip())
-			# print "****************"
+			command_output = \
+		"\n".join(self.visible_output.split('> ')[-1].split('\n')[1:]).strip()
+			
+			# If there is output, handle it once, and then drop the handler.
+			# THIS CONDITION IS NECESSARY BECAUSE THE SIGNAL FIRES A LOT
 			if command_output:
 				self.handling_output_function(command_output)
 				self.handling_output_function = None
-			# self.handling_output_function = None
+
 
 	def handle_command( self, command, handling_output_function ):
+		'''
+		This function runs a specific command with a specified function
+		to handle the output of the command once it is returned.
+		'''
 		self.handling_output_function = handling_output_function
-		# print "***** handling output function is", self.handling_output_function
-
 		self.run_command('clear')
 		self.run_command(command)
 
 
-	# def command_finished( self, widget, data = None ):
-	# 	# Get the output from the last command
-	# 	visible_output = self.terminal.get_text()[0]
-	# 	return "\n".join(visible_output.split('\nPS ')[-2].split('\n')[1:])
-
-	# def process_command_output( self, command, callback_function ):
-	# 	'''
-	# 	This FRONTEND function expects only a SINGLE line of output to be received
-	# 	from a command. It stores this in a variable, and then calls a 
-	# 	function that is supplied to process that output.
-	# 	'''
-		
-	# 	self.run_command(command)
-
-	# 	self.last_handle_id = self.terminal.connect('contents-changed', 
-	# 		self._process_command_output, self.last_output, callback_function)
-
-		
-		
-
-	# def _process_command_output(self, widget, output_variable = None, callback_function = None):
-	# 	'''
-	# 	This BACKEND function is the signal handler once the command has been
-	# 	received and processed.  It is what calls the handler function to 
-	# 	really process the output.
-	# 	'''
-		
-	# 	visible_output = self.terminal.get_text()[0]
-	# 	print "VISIBLE OUTPUT IS",visible_output
-	# 	try:
-	# 		command_output = "\n".join(visible_output.split('> ')[-2].split('\n')[1:])
-	# 		output_variable = command_output
-	# 		print "COMMAND OUTPUT IS ", command_output
-	# 	except IndexError:
-	# 		# Not enough output on the buffer. That is okay, it will move on!
-	# 		pass
-	# 	print "==END PROCESSING===="
-	# 	callback_function( output_variable, self.last_handle_id )
-
 	def import_powercli( self ):
+
+		self.run_command('# Importing PowerCLI...')
 		self.run_command('Get-Module -ListAvailable PowerCLI* | Import-Module')
 
+
 	def connect_server( self ):
+		self.run_command('# Connecting to vCenter server...')
 		self.run_command('Connect-VIServer 10.1.214.223 -User administrator@vsphere.local -Password S@ndbox2')
 
-	def print_output( self, output, signal_handler ):
-		# print output
-		for line in output.split(','):
-			print line.upper()
+	# I put these optional parameters in case it is called by a widget handler
+	def load_vapps( self, widget = None, data = None ):
+		self.run_command('# Loading vApps...')
+		self.handle_command(\
+'(Get-ChildItem vmstore:/sandbox_datacenter/datastore1/vapps).Name -Join ",,"',
+	self._load_vapps)
 
-	def initialize_powershell( self ):
+	def _load_vapps( self, vapps ):
+		# for vapp in vapps.split('@'):
+		# 	print vapp
+
+		# Cut out the Parentheses...
+		vapps_list = \
+			[ re.sub(r'\s*\(.*\)\s*','',vapp) for vapp in vapps.split(',,') ] 
+
+		for vapp in vapps_list:
+			added = False
+			for key in mapping:
+				if key in vapp.lower():
+					mapping[key][1].get_model().append(
+						[GdkPixbuf.Pixbuf.new_from_file( mapping[key][0] ), vapp ])
+					added = True
+					break
+			if not added:
+				windows_icons.get_model().append(
+					[GdkPixbuf.Pixbuf.new_from_file( \
+						"icons/anything_150x150.png" ), vapp ])
+
+	def initialize( self ):
+		self.initialized = True
 		self.import_powercli()
-		pass
 		self.connect_server()
+
+		# assuming we connect okay...
+		self.run_command("# Connected! Welcome to SANDBOX!")
 		# self.process_command_output('(Get-VM).Name -Join ","', self.print_output)
 		# print "OUTSIDE", self.last_output
+
 
 def h_scrollbar_event(widget, data, extra = None): 
 	print "H SCROLLING", widget
@@ -379,13 +379,11 @@ fixed_middle_event_box = builder.get_object('fixed_middle_event_box')
 windows_icons = builder.get_object('windows_icons')
 linux_icons = builder.get_object('linux_icons')
 middle_scroll = builder.get_object('middle_scroll')
-# powershell_output = builder.get_object('powershell_output')
-# powershell_input = builder.get_object('powershell_input')
-# powershell_scroller = builder.get_object('powershell_scroll_window')
 
 bottom_vbox = builder.get_object('bottom_vbox')
 powershell = VteWidget(bottom_vbox)
-
+load_vapps_button = builder.get_object('load_vapps_button')
+load_vapps_button.connect('clicked', powershell.load_vapps)
 
 def hostname_entry_changed( widget, data = None ):
 	print "HOSTNAME ENTRY CLICKED"
@@ -399,29 +397,18 @@ hostname_entry.connect('changed', hostname_entry_changed)
 def deselect_all():
 	for each in fixed_middle.get_children(): each.set_name('nothing')
 
+'''
+# This is an example handler for our command output.
+# It just takes an argument, which is a string of the output being supplied
+# You can do whatever you want with it, but it must take in a variable
 
-def middle_pressed( widget, data ):
-	print "Middle Section pressed!"
-	# deselect_all()
-
-def show_stuff(output):
-	#print output
-	print "@"*80
-	print "|||||||||" + output + "||||||||"
-	# print "AND SIGNAL HANDLER IS", signal_handler
-	# powershell.terminal.disconnect(signal_handler)
-
-def handle_keypress( output ):
-	print "$$$$$$$$$$$"
+def handle_command_output( output ):	
 	print output.upper()
 
-def middle_released( widget, data ):
-	print "Middle Section released!"
-	
-	# powershell.run_command('(Get-Date) -Join ","')
-	powershell.handle_command('(Get-Date) -Join ","', show_stuff)
+'''
 
-	# deselect_all() b
+def middle_pressed( widget, data ): pass
+def middle_released( widget, data ): pass
 
 
 fixed_middle.connect('scroll-event', scroll_event)
@@ -502,7 +489,7 @@ def start_drag( widget, drag_context, data, info, time ):
 
 def keyboard_press( widget, data ):
 	print "KEYBOARD PRESSED", widget
-	powershell.handle_command('(Get-VM) -Join ","', handle_keypress)
+	
 	key = data.keyval 
 	if ( key == Gdk.KEY_Delete ):
 		print 'DELETE KEY PRESS'
@@ -545,62 +532,6 @@ Gtk.StyleContext.add_provider_for_screen(
     Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
 )
 
-
-def connect_to_server():
-	print "Starting PowerShell..."
-	powershell = Powershell()
-	print "Importing PowerCLI..."
-	powershell.import_powercli()
-	print "Connecting to server..."
-	powershell.connect_testing_server()
-
-
-
-
-def load_vapps():
-
-	print "Starting PowerShell..."
-	powershell = Powershell()
-	print "Importing PowerCLI..."
-	powershell.import_powercli()
-	print "Connecting to server..."
-	powershell.connect_testing_server()
-	print "Getting vApps..."
-
-	# Grab the vApps..
-	vapps = powershell.run_command(\
-	'(Get-ChildItem vmstore:/sandbox_datacenter/datastore1/vapps).Name')
-
-	# Cut out the Parentheses...
-	vapps_list = \
-		[ re.sub(r'\s*\(.*\)\s*','',vapp) for vapp in vapps.split('\n') ] 
-
-	for vapp in vapps_list:
-		added = False
-		for key in mapping:
-			if key in vapp.lower():
-				mapping[key][1].get_model().append(
-					[GdkPixbuf.Pixbuf.new_from_file( mapping[key][0] ), vapp ])
-				added = True
-				break
-		if not added:
-			windows_icons.get_model().append(
-				[GdkPixbuf.Pixbuf.new_from_file( \
-					"icons/anything_150x150.png" ), vapp ])
-
-# https://wiki.gnome.org/Projects/PyGObject/Threading
-# GObject.threads_init()
-
-
-# powershell_widget = PowerShellWidget( 	powershell_output, powershell_input, \
-# 										powershell_scroller )
-# powershell_widget.run_command('Get-Module -ListAvailable PowerCLI* | Import-Module')
-# powershell_widget.run_command('Connect-VIServer 10.1.214.223 -User administrator@vsphere.local -Password S@ndbox2')
-
-
-# load_vapps()
-# terminal_send_command('Get-Module -ListAvailable PowerCLI* | Import-Module\n')
-# terminal_send_command('Connect-VIServer 10.1.214.223 -User administrator@vsphere.local -Password S@ndbox2\n')
 
 
 window.show_all()
