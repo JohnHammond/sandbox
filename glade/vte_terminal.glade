@@ -26,6 +26,30 @@
       </row>
     </data>
   </object>
+  <object class="GtkAdjustment" id="powershell_scroller">
+    <property name="upper">100</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">10</property>
+  </object>
+  <object class="GtkAdjustment" id="ram_range">
+    <property name="upper">16</property>
+    <property name="step_increment">1</property>
+    <property name="page_increment">10</property>
+  </object>
+  <object class="GtkListStore" id="windows_listing">
+    <columns>
+      <!-- column-name picture -->
+      <column type="GdkPixbuf"/>
+      <!-- column-name name -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0">icons/windows_10_150x150.png</col>
+        <col id="1" translatable="yes">Windows 10</col>
+      </row>
+    </data>
+  </object>
   <object class="GtkWindow" id="main_window">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">SANDBOX</property>
@@ -792,29 +816,5 @@
         </child>
       </object>
     </child>
-  </object>
-  <object class="GtkAdjustment" id="powershell_scroller">
-    <property name="upper">100</property>
-    <property name="step_increment">1</property>
-    <property name="page_increment">10</property>
-  </object>
-  <object class="GtkAdjustment" id="ram_range">
-    <property name="upper">16</property>
-    <property name="step_increment">1</property>
-    <property name="page_increment">10</property>
-  </object>
-  <object class="GtkListStore" id="windows_listing">
-    <columns>
-      <!-- column-name picture -->
-      <column type="GdkPixbuf"/>
-      <!-- column-name name -->
-      <column type="gchararray"/>
-    </columns>
-    <data>
-      <row>
-        <col id="0">icons/windows_10_150x150.png</col>
-        <col id="1" translatable="yes">Windows 10</col>
-      </row>
-    </data>
   </object>
 </interface>

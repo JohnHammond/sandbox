@@ -2,12 +2,15 @@
 
 import gi
 gi.require_version('Gtk', '3.0')
+gi.require_version('Vte', '2.91')
 from gi.repository import Gtk, Gdk, GdkPixbuf, GObject, GLib, Vte
 import re
+import time
+import os
 
 from powershell_engine import Powershell
 builder = Gtk.Builder()
-builder.add_from_file( 'gui.glade' )
+builder.add_from_file( 'vte_terminal.glade' )
 
 DRAG_ACTION = Gdk.DragAction.COPY
 
@@ -186,6 +189,145 @@ class PowerShellWidget():
 horizontal_scroll = 0
 vertical_scroll = 0
 
+
+def do_nothing(anything = None, signal_handler = 0):
+	pass
+
+class VteWidget:
+
+	def __init__( self, container): 
+
+		# Some example code...
+		# https://www.programcreek.com/python/example/56624/vte.Terminal
+
+		# This is the  GTK Widget. It only runs on Linux/Mac unfortunately...
+		self.terminal = Vte.Terminal()
+
+		# This is the path to the shell. May need changed for os-specific work
+		self.command = '/usr/bin/powershell'
+
+		# Stitch the shell to the widget...
+		self.terminal.spawn_sync(
+			Vte.PtyFlags.DEFAULT, #default is fine
+			os.environ['HOME'], #where to start the command?
+			[ self.command ], #where is the emulator?
+			[], #it's ok to leave this list empty
+			GLib.SpawnFlags.DO_NOT_REAP_CHILD,
+			None, #at least None is required
+			None,
+		)
+
+		# Keep track fo command output in a variable
+		self.last_handle_id = 0
+		self.last_output = ''
+		self.visible_output = ''
+
+		# Add it to the container (assuming it is a GtkBox...)
+		self.box = container
+		self.box.pack_start(self.terminal, True, True, 0)
+
+		self.handling_output_function = None
+
+		# Monitor when a command finishes...
+		self.terminal.connect('contents-changed', self.get_output,
+			self.handling_output_function)
+		
+		# Turn off input....
+		#self.terminal.set_property('input-enabled', False)
+
+		# Startup...
+		GLib.timeout_add_seconds( 2, self.initialize_powershell )
+
+	def run_command( self, command ):
+		self.terminal.feed_child(command + '\n', len(command)+ 1)
+
+	def get_output( self, widget, handling_output_function = None ):
+		# print "="*(80)
+
+		# print "CURRENT OUTPUT IS"
+		# print "vvvvvvvvvvvvvvvvvv"
+		self.visible_output = self.terminal.get_text()[0]
+		# print self.visible_output
+		# print "^^^^^^^^^^^^^^^^^^"
+		# print 
+
+		if self.handling_output_function:
+			# print "HANDLING THIS COMMAND!"
+			command_output = "\n".join(self.visible_output.split('> ')[-1].split('\n')[1:]).strip()
+			# print "****************"
+			# print "COMMAND OUTPUT IS",
+			# print repr(command_output.strip())
+			# print "****************"
+			if command_output:
+				self.handling_output_function(command_output)
+				self.handling_output_function = None
+			# self.handling_output_function = None
+
+	def handle_command( self, command, handling_output_function ):
+		self.handling_output_function = handling_output_function
+		# print "***** handling output function is", self.handling_output_function
+
+		self.run_command('clear')
+		self.run_command(command)
+
+
+	# def command_finished( self, widget, data = None ):
+	# 	# Get the output from the last command
+	# 	visible_output = self.terminal.get_text()[0]
+	# 	return "\n".join(visible_output.split('\nPS ')[-2].split('\n')[1:])
+
+	# def process_command_output( self, command, callback_function ):
+	# 	'''
+	# 	This FRONTEND function expects only a SINGLE line of output to be received
+	# 	from a command. It stores this in a variable, and then calls a 
+	# 	function that is supplied to process that output.
+	# 	'''
+		
+	# 	self.run_command(command)
+
+	# 	self.last_handle_id = self.terminal.connect('contents-changed', 
+	# 		self._process_command_output, self.last_output, callback_function)
+
+		
+		
+
+	# def _process_command_output(self, widget, output_variable = None, callback_function = None):
+	# 	'''
+	# 	This BACKEND function is the signal handler once the command has been
+	# 	received and processed.  It is what calls the handler function to 
+	# 	really process the output.
+	# 	'''
+		
+	# 	visible_output = self.terminal.get_text()[0]
+	# 	print "VISIBLE OUTPUT IS",visible_output
+	# 	try:
+	# 		command_output = "\n".join(visible_output.split('> ')[-2].split('\n')[1:])
+	# 		output_variable = command_output
+	# 		print "COMMAND OUTPUT IS ", command_output
+	# 	except IndexError:
+	# 		# Not enough output on the buffer. That is okay, it will move on!
+	# 		pass
+	# 	print "==END PROCESSING===="
+	# 	callback_function( output_variable, self.last_handle_id )
+
+	def import_powercli( self ):
+		self.run_command('Get-Module -ListAvailable PowerCLI* | Import-Module')
+
+	def connect_server( self ):
+		self.run_command('Connect-VIServer 10.1.214.223 -User administrator@vsphere.local -Password S@ndbox2')
+
+	def print_output( self, output, signal_handler ):
+		# print output
+		for line in output.split(','):
+			print line.upper()
+
+	def initialize_powershell( self ):
+		self.import_powercli()
+		pass
+		self.connect_server()
+		# self.process_command_output('(Get-VM).Name -Join ","', self.print_output)
+		# print "OUTSIDE", self.last_output
+
 def h_scrollbar_event(widget, data, extra = None): 
 	print "H SCROLLING", widget
 	global horizontal_scroll, vertical_scroll
@@ -237,9 +379,12 @@ fixed_middle_event_box = builder.get_object('fixed_middle_event_box')
 windows_icons = builder.get_object('windows_icons')
 linux_icons = builder.get_object('linux_icons')
 middle_scroll = builder.get_object('middle_scroll')
-powershell_output = builder.get_object('powershell_output')
-powershell_input = builder.get_object('powershell_input')
-powershell_scroller = builder.get_object('powershell_scroll_window')
+# powershell_output = builder.get_object('powershell_output')
+# powershell_input = builder.get_object('powershell_input')
+# powershell_scroller = builder.get_object('powershell_scroll_window')
+
+bottom_vbox = builder.get_object('bottom_vbox')
+powershell = VteWidget(bottom_vbox)
 
 
 def hostname_entry_changed( widget, data = None ):
@@ -259,9 +404,24 @@ def middle_pressed( widget, data ):
 	print "Middle Section pressed!"
 	# deselect_all()
 
+def show_stuff(output):
+	#print output
+	print "@"*80
+	print "|||||||||" + output + "||||||||"
+	# print "AND SIGNAL HANDLER IS", signal_handler
+	# powershell.terminal.disconnect(signal_handler)
+
+def handle_keypress( output ):
+	print "$$$$$$$$$$$"
+	print output.upper()
+
 def middle_released( widget, data ):
 	print "Middle Section released!"
-	# deselect_all()
+	
+	# powershell.run_command('(Get-Date) -Join ","')
+	powershell.handle_command('(Get-Date) -Join ","', show_stuff)
+
+	# deselect_all() b
 
 
 fixed_middle.connect('scroll-event', scroll_event)
@@ -342,6 +502,7 @@ def start_drag( widget, drag_context, data, info, time ):
 
 def keyboard_press( widget, data ):
 	print "KEYBOARD PRESSED", widget
+	powershell.handle_command('(Get-VM) -Join ","', handle_keypress)
 	key = data.keyval 
 	if ( key == Gdk.KEY_Delete ):
 		print 'DELETE KEY PRESS'
@@ -394,6 +555,8 @@ def connect_to_server():
 	powershell.connect_testing_server()
 
 
+
+
 def load_vapps():
 
 	print "Starting PowerShell..."
@@ -436,6 +599,9 @@ def load_vapps():
 
 
 # load_vapps()
+# terminal_send_command('Get-Module -ListAvailable PowerCLI* | Import-Module\n')
+# terminal_send_command('Connect-VIServer 10.1.214.223 -User administrator@vsphere.local -Password S@ndbox2\n')
+
 
 window.show_all()
 window.connect('destroy', Gtk.main_quit)
