@@ -225,9 +225,6 @@ def scroll_event(widget, data, extra = None):
 
 dragging = [False, None]
 
-
-
-
 window = builder.get_object('main_window')
 fixed_middle = builder.get_object('fixed_middle')
 vm_name_label = builder.get_object('vm_name_label')
@@ -432,17 +429,16 @@ def load_vapps():
 # GObject.threads_init()
 
 
-powershell_widget = PowerShellWidget( 	powershell_output, powershell_input, \
-										powershell_scroller )
+# powershell_widget = PowerShellWidget( 	powershell_output, powershell_input, \
+# 										powershell_scroller )
+# powershell_widget.run_command('Get-Module -ListAvailable PowerCLI* | Import-Module')
+# powershell_widget.run_command('Connect-VIServer 10.1.214.223 -User administrator@vsphere.local -Password S@ndbox2')
+
 
 # load_vapps()
 
 window.show_all()
 window.connect('destroy', Gtk.main_quit)
-
-powershell_widget.run_command('Get-Module -ListAvailable PowerCLI* | Import-Module')
-
-powershell_widget.run_command('Connect-VIServer 10.1.214.223 -User administrator@vsphere.local -Password S@ndbox2')
 
 
 Gtk.main()

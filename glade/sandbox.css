@@ -13,3 +13,21 @@
 	border: 0px solid black;
 	background: rgba(255,255,255,0.5);
 }
+
+#powershell_output{
+
+	background-color: #00003f;
+	border: 0px solid black;
+	font-family: "Courier New";
+	font-size: small;
+	color: white;
+}
+
+#powershell_input{
+
+	background: #00003f;
+	border-color:#00003f;
+	font-family: "Courier New";
+	font-size: small;
+	color: white;
+}

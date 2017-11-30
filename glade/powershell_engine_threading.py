@@ -4,7 +4,6 @@ import os
 import platform
 import subprocess
 import threading
-import multiprocessing
 import sys
 import time
 # This 'Queue' object keeps the input and output of Powershell buffered.
@@ -41,7 +40,7 @@ class Powershell:
 												   self.queue
 												 ) )
 		# The thread dies with the program.
-		self.thread.daemon = True 
+		# self.thread.daemon = True 
 
 		# All set up... now run PowerShell!
 		self.thread.start()
