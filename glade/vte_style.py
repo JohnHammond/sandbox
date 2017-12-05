@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
 import gi
 gi.require_version('Gtk', '3.0')
@@ -7,10 +8,13 @@ from gi.repository import Gtk, Gdk, GdkPixbuf, GObject, GLib, Vte
 import re
 import time
 import os
+import glob
+
 
 from powershell_engine import Powershell
 builder = Gtk.Builder()
 builder.add_from_file( 'vte_terminal.glade' )
+builder.add_from_file( 'list.glade' )
 
 DRAG_ACTION = Gdk.DragAction.COPY
 
@@ -32,8 +36,10 @@ class VM:
 	'''
 	def __init__( self ):
 
+		self.name = "New VM"
 		self.hostname = 'virtual-machine'
 		self.ip_method = 'static'
+		self.ip_address = ''
 		self.vapp_name = ''
 		# self.ip_address = ''
 		self.hdd = 50 # GB
@@ -55,9 +61,10 @@ class VMIcon():
 		self.selected = False
 
 		self.container = Gtk.EventBox()
-		self.container.parent = self
+		self.container.vmicon = self
 		self.image_widget = Gtk.Image.new_from_file(image_filename)
 		self.vbox_widget = Gtk.Box( orientation=Gtk.Orientation.VERTICAL )
+		self.hbox_widget = Gtk.Box(  )
 		self.entry_widget = Gtk.Entry()
 		self.entry_widget.set_alignment(0.5)
 		self.entry_widget.connect('changed', self.text_changed)
@@ -65,17 +72,58 @@ class VMIcon():
 		# This is specifically for CSS styling...
 		self.entry_widget.set_name('vmname_entry')
 
-		self.entry_widget.set_text('New VM')
+		self.entry_widget.set_text(self.vm.name)
+
+		self.power_display = Gtk.Label()
+		self.power_display.set_markup("<span font='15' color='black'> ⬛</span>")
+		# self.power_display.set_markup("<span font='15' color='green'> ⬛</span>")
+		# self.power_display.set_markup("<span font='15' color='darkred'> ⬛</span>")
 
 		self.vbox_widget.pack_start(self.image_widget, True, True, 0)
-		self.vbox_widget.pack_start(self.entry_widget, True, True, 0)
+		self.vbox_widget.pack_start(self.hbox_widget, True, True, 0)
+		self.hbox_widget.pack_start(self.power_display, False, False, 0)
+		self.hbox_widget.pack_start(self.entry_widget, True, True, 0)
 		self.container.add(self.vbox_widget)
 
 		self.container.connect('button-press-event', self.mouse_press)
 		self.container.connect('button-release-event', self.mouse_release)
 
+		# Create right click menu...
+		self.right_click_menu = Gtk.Menu()
+		self.power_on_button = Gtk.MenuItem("Power On")
+		self.right_click_menu.append( self.power_on_button )
+		self.power_on_button.connect('activate', self.power_on )
+		self.power_off_button = Gtk.MenuItem("Power Off")
+		self.right_click_menu.append( self.power_off_button )
+		self.power_off_button.connect('activate', self.power_off )
+		self.delete_vm_button = Gtk.MenuItem("Delete VM")
+		self.right_click_menu.append( self.delete_vm_button )
+
 		# Allow the user to move it in the display
 		self.enable_drag_and_drop()
+
+	def power_on( self, event = None ):
+		command = "Start-VM '%s' -Confirm:$false" % self.vm.name
+
+		def powered_on( output ):
+			print output
+			self.power_display.set_markup("<span font='15' color='green'> ⬛</span>")
+
+		powershell.handle_command( command, powered_on )
+
+	def power_off( self, event = None ):
+		command = "Stop-VM '%s' -Confirm:$false" % self.vm.name
+
+		def powered_off( output ):
+			print output
+			self.power_display.set_markup("<span font='15' color='red'> ⬛</span>")
+
+		powershell.handle_command( command, powered_off )
+
+	def set_processing( self ):
+		self.container.set_name('processing')
+		self.entry_widget.set_sensitive(False)
+
 
 	def enable_drag_and_drop( self ):
 		self.container.drag_source_set(Gdk.ModifierType.BUTTON1_MASK, [], \
@@ -85,19 +133,33 @@ class VMIcon():
 
 
 	def text_changed( self, widget, data = None ):
-		print "VMICON TEXT CHANGED!"
-		print widget.get_text()
+		# print "VMICON TEXT CHANGED!"
+		# print widget.get_text()
+		self.vm.name = self.entry_widget.get_text()
 		if self.selected:
-			set_vm_name_display( self.entry_widget.get_text() ) 
+			set_vm_name_display( self.vm.name )
 
 
 	def mouse_press( self, widget, data ):
 		global dragging
 		print "VMICON IS CLICKED, ", widget
-		print data
-		if data.type == Gdk.EventType._2BUTTON_PRESS:
-			print "*** DOUBLE CLICKED! ***"
 
+		if self.container.get_name() == 'processing':
+			return
+		
+		# IF they right-click, show a menu!
+		if data.button == 3:
+			if self.selected:
+				self.right_click_menu.show_all()
+				self.right_click_menu.popup(None,None,None,None,0, \
+										Gtk.get_current_event_time())
+
+		# Double-click with left-click...
+		if data.type == Gdk.EventType._2BUTTON_PRESS and data.button == 1:
+			print "*** DOUBLE CLICKED! ***"
+			powershell.run_command( \
+				'Start-Process chromium-browser (../get_html_link.ps1 -VMName "%s")' % self.vm.name )
+		
 
 		deselect_all()
 		self.select()
@@ -116,13 +178,30 @@ class VMIcon():
 		hdd_spin_button.set_value( self.vm.hdd )
 		cpu_spin_button.set_value( self.vm.cpu )
 		ram_spin_button.set_value( self.vm.ram )
+		create_button.show()
+		provision_button.show()
 
-	def unselect():
+		hostname_entry.set_sensitive(True)
+		ip_address_entry.set_sensitive(static_radio_button.get_active())
+		hdd_spin_button.set_sensitive(True)
+		cpu_spin_button.set_sensitive(True)
+		ram_spin_button.set_sensitive(True)
+		esxi_hosts_combo_box.set_sensitive(True)
+
+	def unselect( self ):
 		global dragging
 
 		self.selected = False
 		deselect_all()
 		self.container.set_name('nothing')
+		create_button.hide()
+
+		hostname_entry.set_sensitive(False)
+		ip_address_entry.set_sensitive(False)
+		hdd_spin_button.set_sensitive(False)
+		cpu_spin_button.set_sensitive(False)
+		ram_spin_button.set_sensitive(False)
+		esxi_hosts_combo_box.set_sensitive(False)
 
 
 	def mouse_release( self, widget, data ):
@@ -149,6 +228,7 @@ class PowerShellWidget():
 
 		# Connect the command input box
 		self.input_widget.connect('activate', self.enter_command)
+
 
 		# Create the background process.
 		self.powershell = Powershell()
@@ -204,13 +284,18 @@ class VteWidget:
 		# This is the  GTK Widget. It only runs on Linux/Mac unfortunately...
 		self.terminal = Vte.Terminal()
 
+		# Set colors...
+		self.terminal.set_color_foreground(Gdk.RGBA(0,0,0,255))
+		self.terminal.set_color_background(Gdk.RGBA(0.8, 0.8, 0.8, 1.0))
+
 		# This is the path to the shell. May need changed for os-specific work
 		self.command = '/usr/bin/powershell'
 
 		# Stitch the shell to the widget...
 		self.terminal.spawn_sync(
 			Vte.PtyFlags.DEFAULT, #default is fine
-			os.environ['HOME'], #where to start the command?
+			#os.environ['HOME'], #where to start the command?
+			os.getcwd(),
 			[ self.command ], #where is the emulator?
 			[], #it's ok to leave this list empty
 			GLib.SpawnFlags.DO_NOT_REAP_CHILD,
@@ -242,7 +327,12 @@ class VteWidget:
 		#GLib.timeout_add_seconds( 2, self.initialize_powershell )
 
 	def run_command( self, command ):
-		self.terminal.feed_child(command + '\n', len(command)+ 1)
+		# If PowerShell is in a spot to receive output...
+		if self.terminal.get_sensitive():
+			
+			self.terminal.feed_child(command + '\n', len(command)+ 1)
+
+
 
 
 	def get_output( self, widget, handling_output_function = None ):
@@ -254,7 +344,7 @@ class VteWidget:
 		if self.visible_output.endswith('> \n\n\n\n\n') \
 												and not self.initialized:
 			self.initialized = True
-			GLib.timeout_add(300, self.initialize)
+			GLib.timeout_add(800, self.initialize)
 			# self.initialize()
 
 		# If we have set up a handler function, carve out the last output.
@@ -265,11 +355,13 @@ class VteWidget:
 			# If there is output, handle it once, and then drop the handler.
 			# THIS CONDITION IS NECESSARY BECAUSE THE SIGNAL FIRES A LOT
 			if command_output:
+				self.terminal.set_sensitive(True)
 				self.handling_output_function(command_output)
+				left_spinner.stop()
 				self.handling_output_function = None
 
 
-	def handle_command( self, command, handling_output_function ):
+	def handle_command( self, command, handling_output_function = None ):
 		'''
 		This function runs a specific command with a specified function
 		to handle the output of the command once it is returned.
@@ -277,6 +369,10 @@ class VteWidget:
 		self.handling_output_function = handling_output_function
 		self.run_command('clear')
 		self.run_command(command)
+		left_spinner.start()
+
+		if self.handling_output_function != None:
+			self.terminal.set_sensitive(False)
 
 
 	def import_powercli( self ):
@@ -291,6 +387,9 @@ class VteWidget:
 
 	# I put these optional parameters in case it is called by a widget handler
 	def load_vapps( self, widget = None, data = None ):
+
+		# Disable the button so they can't click it again...
+		load_vapps_button.set_sensitive(False)
 		self.run_command('# Loading vApps...')
 		self.handle_command(\
 '(Get-ChildItem vmstore:/sandbox_datacenter/datastore1/vapps).Name -Join ",,"',
@@ -301,15 +400,21 @@ class VteWidget:
 		# 	print vapp
 
 		# Cut out the Parentheses...
-		vapps_list = \
-			[ re.sub(r'\s*\(.*\)\s*','',vapp) for vapp in vapps.split(',,') ] 
+		vapps_list = vapps.split(',,')
+		# vapps_list = \
+		# 	[ re.sub(r'\s*\(.*\)\s*','',vapp) for vapp in vapps.split(',,') ] 
 
 		for vapp in vapps_list:
+			original_vapp_string = vapp
+			#vapp = re.sub(r'\s*\(.*\)\s*','',vapp)
 			added = False
 			for key in mapping:
 				if key in vapp.lower():
+					widget_image = GdkPixbuf.Pixbuf.new_from_file( mapping[key][0] )
+					# widget_image.vapp_string = original_vapp_string
 					mapping[key][1].get_model().append(
-						[GdkPixbuf.Pixbuf.new_from_file( mapping[key][0] ), vapp ])
+						[widget_image, vapp ])
+					
 					added = True
 					break
 			if not added:
@@ -317,16 +422,15 @@ class VteWidget:
 					[GdkPixbuf.Pixbuf.new_from_file( \
 						"icons/anything_150x150.png" ), vapp ])
 
+		load_vapps_button.hide()
+
 	def initialize( self ):
 		self.initialized = True
 		self.import_powercli()
 		self.connect_server()
 
 		# assuming we connect okay...
-		self.run_command("# Connected! Welcome to SANDBOX!")
-		# self.process_command_output('(Get-VM).Name -Join ","', self.print_output)
-		# print "OUTSIDE", self.last_output
-
+		self.handle_command("# Connected! Welcome to SANDBOX!", load_vapps_button.set_sensitive)
 
 def h_scrollbar_event(widget, data, extra = None): 
 	print "H SCROLLING", widget
@@ -371,31 +475,130 @@ window = builder.get_object('main_window')
 fixed_middle = builder.get_object('fixed_middle')
 vm_name_label = builder.get_object('vm_name_label')
 hostname_entry = builder.get_object('hostname_entry')
-
+ip_address_entry = builder.get_object('ip_address_entry')
+esxi_hosts_combo_box = builder.get_object('esxi_hosts_combo_box')
 hdd_spin_button = builder.get_object('hdd_spin_button')
 cpu_spin_button = builder.get_object('cpu_spin_button')
 ram_spin_button = builder.get_object('ram_spin_button')
 fixed_middle_event_box = builder.get_object('fixed_middle_event_box')
 windows_icons = builder.get_object('windows_icons')
 linux_icons = builder.get_object('linux_icons')
+ics_icons = builder.get_object('ics_icons')
 middle_scroll = builder.get_object('middle_scroll')
+create_button = builder.get_object('create_button')
+left_spinner = builder.get_object('left_spinner')
+provision_window = builder.get_object('provision_window')
+provision_button = builder.get_object('provision_button')
+configure_button = builder.get_object('configure_button')
+static_radio_button = builder.get_object('static_radio_button')
+
+
+hostname_entry.set_sensitive(False)
+ip_address_entry.set_sensitive(False)
+hdd_spin_button.set_sensitive(False)
+cpu_spin_button.set_sensitive(False)
+ram_spin_button.set_sensitive(False)
+esxi_hosts_combo_box.set_sensitive(False)
+
+
+
+
+def on_enabled_toggle_toggled( widget, path ):
+	global provisioning_features
+
+	provisioning_features[path][1] = not provisioning_features[path][1]
+
+
+def ok_button_activate_cb( widget ):
+	global provisioning_features, scripts
+	provision_window.hide()
+
+	item = provisioning_features.get_iter_first()
+
+	while ( item != None ):
+		script_name = provisioning_features[item][0]
+		enabled = provisioning_features[item][1]
+
+		if enabled:
+			command = '%s -VMName "%s"' % \
+					( scripts[script_name], 
+					get_selected_vmicon().vm.name )
+
+			powershell.handle_command( command ) 
+
+		item = provisioning_features.iter_next(item)
+
+
+
+
+def close_window(widget):
+	Gtk.main_quit()
+
+def on_provision_button_clicked( widget = None, data = None ):
+	provision_window.show_all()
+
+def setting_ip_address(output):
+	configure_button.set_sensitive(True)
+
+def setting_vm_specs( output ):
+	pass
+
+
+def on_configure_button_clicked( widget = None, data = None ):
+	print get_selected_vmicon().vm.name
+	print "HDD", hdd_spin_button.get_value()
+	print "CPU", cpu_spin_button.get_value()
+	print "RAM", ram_spin_button.get_value()
+
+	command = "../powercli/configure_vm.ps1 " +\
+		  " -VMName \"" + 	get_selected_vmicon().vm.name + "\"" +\
+		  " -VMCPU " + str(cpu_spin_button.get_value()) + \
+		  " -VMMemory " + str(ram_spin_button.get_value()) + \
+		  " -IPAddress \"" + ip_address_entry.get_text() + "\""
+
+	powershell.handle_command(command, setting_ip_address ) 
+
+	configure_button.set_sensitive(True)
+
+def on_static_radio_button_toggled( widget = None, eventt = None ):
+	ip_address_entry.set_sensitive(static_radio_button.get_active())
+
+def provision_cancel_button_clicked(widget = None, eventt = None):
+	provision_window.hide()
+
+
+handlers = {
+	"on_enabled_toggle_toggled": on_enabled_toggle_toggled,
+	"ok_button_activate_cb": ok_button_activate_cb,
+	"provision_cancel_button_clicked": provision_cancel_button_clicked,
+	"on_provision_button_clicked": on_provision_button_clicked,
+	"on_configure_button_clicked": on_configure_button_clicked,
+	"on_static_radio_button_toggled": on_static_radio_button_toggled,
+}
+
+builder.connect_signals(handlers)
+provisioning_features = builder.get_object('provisioning_features')
+provisioning_treeview = builder.get_object('provisioning_treeview')
 
 bottom_vbox = builder.get_object('bottom_vbox')
 powershell = VteWidget(bottom_vbox)
 load_vapps_button = builder.get_object('load_vapps_button')
 load_vapps_button.connect('clicked', powershell.load_vapps)
+load_vapps_button.set_sensitive(False)
 
 def hostname_entry_changed( widget, data = None ):
 	print "HOSTNAME ENTRY CLICKED"
-	virtual_machines = fixed_middle.get_children()
-	for vm in virtual_machines:
-		if ( vm.get_name() == 'selected' ):
-			print vm.parent
+	children = fixed_middle.get_children()
+	for eventbox in children:
+		if ( eventbox.get_name() == 'selected' ):
+			print eventbox.vmicon
 
 hostname_entry.connect('changed', hostname_entry_changed)
 
 def deselect_all():
-	for each in fixed_middle.get_children(): each.set_name('nothing')
+	for each in fixed_middle.get_children(): 
+		if each.get_name() == 'selected':
+			each.set_name('normal')
 
 '''
 # This is an example handler for our command output.
@@ -404,11 +607,17 @@ def deselect_all():
 
 def handle_command_output( output ):	
 	print output.upper()
-
 '''
+
+def get_selected_vmicon():
+
+	for child in fixed_middle.get_children():
+		if (  child.get_name() == 'selected' ):
+			return child.vmicon
 
 def middle_pressed( widget, data ): pass
 def middle_released( widget, data ): pass
+	# get_selected_vmicon().unselect()
 
 
 fixed_middle.connect('scroll-event', scroll_event)
@@ -420,6 +629,7 @@ middle_scroll.get_vscrollbar().connect('change-value', v_scrollbar_event)
 mapping = {
 	"windows 10": [ "icons/windows_10_150x150.png", windows_icons],
 	"centos": [ "icons/centos_150x150.png", linux_icons],
+	"samurai": [ "icons/samurai_150x150.png", ics_icons],
 	"windows xp": [ "icons/windows_xp_150x150.png", windows_icons ],
 	"ubuntu": [ "icons/ubuntu_150x150.png", linux_icons ],
 	"kali": [ "icons/kali_150x150.png", linux_icons ] ,
@@ -454,7 +664,11 @@ def received_drop( widget, drag_context, x,y, data,info, time ):
 	print data.get_text()
 	print "x", x, ", y", y
 
-	vmicon = VMIcon( data.get_text() )
+	filename, vapp_name = data.get_text().split('<DELIMETER>')
+
+	vmicon = VMIcon( filename )
+	vmicon.vm.vapp_name = vapp_name
+	print "**** SET VAPP NAME TO", vmicon.vm.vapp_name
 	fixed_middle.connect('drag-motion', dragging_widget)
 
 	fixed_middle.put( vmicon.container, x-75 +horizontal_scroll, y-75 +vertical_scroll)
@@ -475,27 +689,60 @@ def start_drag( widget, drag_context, data, info, time ):
 	print "STARTING TO DRAG!"
 	global dragging
 	
+	if widget.get_name() == 'processing':
+		return
+
 	dragging = [False, None]
 
 	selected_path = widget.get_selected_items()[0]
 	selected_iter = widget.get_model().get_iter(selected_path)
-
+	
+	gtk_image =  widget.get_model().get_value(selected_iter, 0)
+	vapp_name = widget.get_model().get_value(selected_iter, 1)
 	# View the selected item, get the text, and map that to the proper image
-	filename = get_icon_filename( \
-		widget.get_model().get_value(selected_iter, 1) )
+	filename = get_icon_filename( vapp_name )
 
-	data.set_text(filename, -1)
+	data.set_text("<DELIMETER>".join([ filename, vapp_name ]), -1)
+
 
 
 def keyboard_press( widget, data ):
 	print "KEYBOARD PRESSED", widget
-	
+	get_selected_vmicon()
 	key = data.keyval 
 	if ( key == Gdk.KEY_Delete ):
 		print 'DELETE KEY PRESS'
 		for each in fixed_middle.get_children():
 			if each.get_name() == 'selected':
 				each.destroy()
+
+
+def finished_creating_vm( output ):
+	powershell.run_command('Get-VM')
+
+	create_button.hide()
+	
+	configure_button.show()
+
+def create_virtual_machine( widget, data = None ):
+	vmicon = get_selected_vmicon()
+
+	if vmicon:
+
+		ovf_location = \
+	'/media/john/C24CE0124CDFFED3/Users/Capstone/local_vapps/%s/*.ovf' % vmicon.vm.vapp_name
+
+		powershell.handle_command('../powercli/create_vm_from_vapp.ps1 -VMName "' +\
+		vmicon.vm.name + '" -OVFLocation "' + ovf_location + '" ', finished_creating_vm  )
+		vmicon.set_processing()
+		
+		create_button.set_sensitive(False)
+
+	else:
+		print "NO VMICON IS SELECTED!!!!!!!!!!"
+
+
+create_button.connect('clicked', create_virtual_machine)
 
 
 fixed_middle.drag_dest_set(Gtk.DestDefaults.ALL, [], DRAG_ACTION)
@@ -532,10 +779,20 @@ Gtk.StyleContext.add_provider_for_screen(
     Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
 )
 
-
-
 window.show_all()
 window.connect('destroy', Gtk.main_quit)
+create_button.hide()
+provision_button.hide()
+left_spinner.start()
+
+
+scripts = \
+	{ os.path.splitext(os.path.basename(x))[0].title().replace('_'," "):x \
+	for x in glob.glob("../powercli/provision/*.ps1")}
+
+for key in scripts.iterkeys():
+	provisioning_features.append([ key, False] )
+
 
 
 Gtk.main()

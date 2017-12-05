@@ -12,6 +12,20 @@
     <property name="step_increment">1</property>
     <property name="page_increment">10</property>
   </object>
+  <object class="GtkListStore" id="ics_listing">
+    <columns>
+      <!-- column-name picture -->
+      <column type="GdkPixbuf"/>
+      <!-- column-name name -->
+      <column type="gchararray"/>
+    </columns>
+    <data>
+      <row>
+        <col id="0">icons/windows_10_150x150.png</col>
+        <col id="1" translatable="yes">Windows 10</col>
+      </row>
+    </data>
+  </object>
   <object class="GtkListStore" id="linux_listing">
     <columns>
       <!-- column-name picture -->
@@ -37,12 +51,19 @@
       <!-- column-name name -->
       <column type="gchararray"/>
     </columns>
+    <data>
+      <row>
+        <col id="0">icons/windows_10_150x150.png</col>
+        <col id="1" translatable="yes">Windows 10</col>
+      </row>
+    </data>
   </object>
   <object class="GtkWindow" id="main_window">
     <property name="can_focus">False</property>
     <property name="title" translatable="yes">SANDBOX</property>
     <property name="default_width">1680</property>
     <property name="default_height">980</property>
+    <property name="icon">logo_small_QzO_icon.ico</property>
     <child>
       <object class="GtkPaned" id="paned">
         <property name="visible">True</property>
@@ -232,7 +253,7 @@
                         <property name="name">vm_name_label</property>
                         <property name="visible">True</property>
                         <property name="can_focus">False</property>
-                        <property name="label" translatable="yes">&lt;span font='30' color='gray'&gt;Windows 10&lt;/span&gt;</property>
+                        <property name="label" translatable="yes">&lt;span font='30' color='gray'&gt;Welcome!&lt;/span&gt;</property>
                         <property name="use_markup">True</property>
                       </object>
                       <packing>
@@ -564,6 +585,46 @@
                         <property name="position">10</property>
                       </packing>
                     </child>
+                    <child>
+                      <object class="GtkButton" id="create_button">
+                        <property name="label" translatable="yes">Create</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">11</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="provision_button">
+                        <property name="label" translatable="yes">Provision</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <signal name="activate" handler="on_provision_button_clicked" swapped="no"/>
+                        <signal name="clicked" handler="on_provision_button_clicked" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">12</property>
+                      </packing>
+                    </child>
+                    <child>
+                      <object class="GtkButton" id="configure_button">
+                        <property name="label" translatable="yes">Configure</property>
+                        <property name="can_focus">True</property>
+                        <property name="receives_default">True</property>
+                        <signal name="activate" handler="on_configure_button_clicked" swapped="no"/>
+                        <signal name="clicked" handler="on_configure_button_clicked" swapped="no"/>
+                      </object>
+                      <packing>
+                        <property name="expand">False</property>
+                        <property name="fill">True</property>
+                        <property name="position">13</property>
+                      </packing>
+                    </child>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -741,7 +802,36 @@
                             <property name="can_focus">True</property>
                             <property name="shadow_type">in</property>
                             <child>
-                              <placeholder/>
+                              <object class="GtkViewport" id="ics_viewport">
+                                <property name="visible">True</property>
+                                <property name="can_focus">False</property>
+                                <child>
+                                  <object class="GtkIconView" id="ics_icons">
+                                    <property name="visible">True</property>
+                                    <property name="can_focus">True</property>
+                                    <property name="margin">40</property>
+                                    <property name="model">ics_listing</property>
+                                    <property name="columns">1</property>
+                                    <property name="row_spacing">0</property>
+                                    <property name="column_spacing">0</property>
+                                    <property name="reorderable">True</property>
+                                    <property name="item_padding">0</property>
+                                    <property name="activate_on_single_click">True</property>
+                                    <child>
+                                      <object class="GtkCellRendererPixbuf" id="ics_image"/>
+                                      <attributes>
+                                        <attribute name="pixbuf">0</attribute>
+                                      </attributes>
+                                    </child>
+                                    <child>
+                                      <object class="GtkCellRendererText" id="ics_text"/>
+                                      <attributes>
+                                        <attribute name="text">1</attribute>
+                                      </attributes>
+                                    </child>
+                                  </object>
+                                </child>
+                              </object>
                             </child>
                           </object>
                           <packing>

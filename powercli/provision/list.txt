@@ -1,0 +1,17 @@
+FTP Service
+IIS Web Server
+Apache Web Server
+MySQL Database
+Microsoft SQL 2017
+DNS Server
+E-Mail Server
+Conpot PLC
+Active Directory
+FTP Service
+IIS Web Server
+Apache Web Server
+MySQL Database
+Microsoft SQL 2017
+DNS Server
+E-Mail Server
+Conpot PLC

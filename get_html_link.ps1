@@ -1,11 +1,8 @@
-
+﻿param($VMName)
 ## $VMName must be supplied 
-
-
 
 $VM = Get-VM -Name $VMName
 $VMMoref = $VM.ExtensionData.MoRef.Value
-
 
 $VCInstanceUUID = $global:DefaultVIServer.InstanceUuid
 $VCName = $global:DefaultVIServer.Name

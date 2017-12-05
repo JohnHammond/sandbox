@@ -1,0 +1,7 @@
+zone "sandboxroolz.org" {
+
+    type master;
+
+    file "/etc/bind/zones/master/db.sandboxroolz.org";
+
+};

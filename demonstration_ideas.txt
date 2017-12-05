@@ -1,0 +1,18 @@
+GUI USAGE
+=========================================================
+
+Showcase all three different GUIs
+
+- No real changes needed
+
+
+Industrial Control Systems with Conpot and Samurai
+==========================================================
+
+* Icon for Samurai
+* Provisioning ability to install Conpot
+
+
+Website Demo
+==========================================================
+

@@ -4,9 +4,20 @@
 }
 
 #selected {
-	
+
 	border: 1px dashed green;
 	background: rgba(255,255,255,0.8);
+}
+
+#processing{
+
+	opacity: 0.3;
+	border: 1px dashed green;
+}
+
+#normal{
+
+	opacity: 1.0;
 }
 
 #vmname_entry{
@@ -24,7 +35,6 @@
 }
 
 #powershell_input{
-
 	background: #00003f;
 	border-color:#00003f;
 	font-family: "Courier New";

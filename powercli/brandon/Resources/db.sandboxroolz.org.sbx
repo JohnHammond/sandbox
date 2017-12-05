@@ -1,0 +1,17 @@
+; BIND data file for sandboxroolz.org
+;
+$TTL    3h
+@       IN      SOA     ns1.sandboxroolz.org. admin.sandboxroolz.org. (
+                          1        ; Serial
+                          3h       ; Refresh after 3 hours
+                          1h       ; Retry after 1 hour
+                          1w       ; Expire after 1 week
+                          1h )     ; Negative caching TTL of 1 day
+;
+@       IN      NS      ns1.sandboxroolz.org.
+@       IN      NS      ns2.sandboxroolz.org.
+
+sandboxroolz.org.    	IN      A       99.99.99.99
+ns1                     IN      A       99.99.99.99
+ns2                     IN      A       99.99.99.98
+www                     IN      CNAME   sandboxroolz.org.
